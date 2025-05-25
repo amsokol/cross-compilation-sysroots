@@ -54,6 +54,7 @@ debootstrap \
     --arch=${ARCH} \
     --variant=minbase \
     --components=${COMPONENTS} \
+    --include=build-essential \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
 
 echo "Installing build-essential inside chroot..."
@@ -61,7 +62,6 @@ chroot "${SYSROOT_DIR}" /bin/bash -c "
   apt update -y &&
   apt dist-upgrade -y &&
   apt upgrade -y &&
-  DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y build-essential &&
   apt clean
 "
 
@@ -86,8 +86,6 @@ rm -rf "${SYSROOT_DIR}"/usr/bin/qemu-*-static
 rm -rf "${SYSROOT_DIR}"/var/cache/apt/archives/*.deb
 
 find "${SYSROOT_DIR}"/var/log -type f -delete
-
-find "${SYSROOT_DIR}" -type f -name "*.a" -delete
 
 echo "Stripping binaries..."
 find "${SYSROOT_DIR}" -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
