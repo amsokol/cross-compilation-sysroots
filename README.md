@@ -1,34 +1,44 @@
 # Instructions for creating the Debian Bookworm sysroots
 
-- Use Ubuntu or Debian linux (both `arm64` and `amd64`) to create the sysroots.
+**Prerequisites**: Use Ubuntu or Debian linux (both `arm64` and `amd64`) to create the sysroots.
 
-- Install the following packages:
+## Install the following package
 
 ```bash
 sudo apt update
-sudo apt install debootstrap
+sudo apt install debootstrap schroot
 ```
 
-- Sudo as root
-  
-- For `arm64` sysroot, use the following command on a `arm64` machine:
+## Login as root
 
 ```bash
-mkdir -p /opt/debian-bookworm-sysroot-arm64
-debootstrap --arch=arm64 --variant=buildd --include=build-essential stable /opt/debian-bookworm-sysroot-arm64 http://deb.debian.org/debian
-cd /opt/debian-bookworm-sysroot-arm64
-tar --xz -cpf ../debian-bookworm-sysroot-arm64.tar.xz --numeric-owner --xattrs --acls --exclude='usr/share/man/*' --exclude='var/cache/apt/archives/*.deb' --exclude='*/*:*' .
-cd ..
-sha256sum ./debian-bookworm-sysroot-arm64.tar.xz
+sudo -i
 ```
 
-- For `amd64` sysroot, use the following command on a `amd64` machine:
+## Create the sysroots for `amd64` architecture
+
+### Create the sysroots for Ubuntu `noble` (v24.04 LTS) `amd64`
 
 ```bash
-mkdir -p /opt/debian-bookworm-sysroot-amd64
-debootstrap --arch=amd64 --variant=buildd --include=build-essential stable /opt/debian-bookworm-sysroot-amd64 http://deb.debian.org/debian
-cd /opt/debian-bookworm-sysroot-amd64
-tar --xz -cpf ../debian-bookworm-sysroot-amd64.tar.xz --numeric-owner --xattrs --acls --exclude='usr/share/man/*' --exclude='var/cache/apt/archives/*.deb' --exclude='*/*:*' .
-cd ..
-sha256sum ./debian-bookworm-sysroot-amd64.tar.xz
+./create-sysroot.sh --distro=ubuntu --version=noble --mirror=http://archive.ubuntu.com/ubuntu/ --arch=amd64 --out=/opt
+```
+
+### Create the sysroots for Debian `bookworm` (v12) `amd64`
+
+```bash
+./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=amd64 --out=/opt
+```
+
+## Create the sysroots for `arm64` architecture
+
+### Create the sysroots for Ubuntu `noble` (v24.04 LTS) `arm64`
+
+```bash
+./create-sysroot.sh --distro=ubuntu --version=noble --mirror=http://ports.ubuntu.com/ubuntu-ports --arch=arm64 --out=/opt
+```
+
+### Create the sysroots for Debian `bookworm` (v12) `arm64`
+
+```bash
+./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=arm64 --out=/opt
 ```
