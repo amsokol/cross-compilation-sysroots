@@ -52,7 +52,7 @@ mkdir -p ${SYSROOT_DIR}
 echo "Downloading sysroot from ${MIRROR}..."
 debootstrap \
     --arch=${ARCH} \
-    --variant=minbase \
+    --variant=buildd \
     --components=${COMPONENTS} \
     --include=build-essential \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
