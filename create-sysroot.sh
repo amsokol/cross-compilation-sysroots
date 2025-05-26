@@ -57,7 +57,7 @@ debootstrap \
     --include=build-essential \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
 
-echo "Installing build-essential inside chroot..."
+echo "Update and upgrade sysroot..."
 chroot "${SYSROOT_DIR}" /bin/bash -c "
   apt update -y &&
   apt dist-upgrade -y &&
