@@ -61,8 +61,10 @@ debootstrap \
     --include=build-essential,${LIBSTDCXX} \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
 
-echo "Cleaning up apt cache..."
+echo "Update and upgrade sysroot..."
 chroot "${SYSROOT_DIR}" /bin/bash -c "
+  apt update &&
+  apt upgrade -y &&
   apt clean
 "
 
