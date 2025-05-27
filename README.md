@@ -20,13 +20,13 @@ sudo -i
 ### Create the sysroots for Ubuntu `noble` (v24.04 LTS) `amd64`
 
 ```bash
-./create-sysroot.sh --distro=ubuntu --version=noble --mirror=http://archive.ubuntu.com/ubuntu/ --arch=amd64 --libstdcxx=libstdc++-13-dev --out=/opt
+./create-sysroot.sh --distro=ubuntu --version=noble --mirror=http://archive.ubuntu.com/ubuntu/ --arch=amd64 --out=/opt
 ```
 
 ### Create the sysroots for Debian `bookworm` (v12) `amd64`
 
 ```bash
-./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=amd64 --libstdcxx=libstdc++-12-dev --out=/opt
+./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=amd64 --out=/opt
 ```
 
 ## Create the sysroots for `arm64` architecture
@@ -34,11 +34,11 @@ sudo -i
 ### Create the sysroots for Ubuntu `noble` (v24.04 LTS) `arm64`
 
 ```bash
-./create-sysroot.sh --distro=ubuntu --version=noble --mirror=http://ports.ubuntu.com/ubuntu-ports --arch=arm64 --libstdcxx=libstdc++-13-dev --out=/opt
+./create-sysroot.sh --distro=ubuntu --version=noble --mirror=http://ports.ubuntu.com/ubuntu-ports --arch=arm64 --out=/opt
 ```
 
 ### Create the sysroots for Debian `bookworm` (v12) `arm64`
 
 ```bash
-./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=arm64 --libstdcxx=libstdc++-12-dev --out=/opt
+./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=arm64 --out=/opt
 ```

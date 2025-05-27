@@ -5,8 +5,6 @@ VERSION="noble"
 MIRROR="http://archive.ubuntu.com/ubuntu/"
 ARCH="x86_64"
 FOLDER="/opt"
-COMPONENTS="main,restricted,universe,multiverse"
-LIBSTDCXX="libstdc++-13-dev"
 
 # Parse args
 for arg in "$@"; do
@@ -22,9 +20,6 @@ for arg in "$@"; do
       ;;
     --arch=*)
       ARCH="${arg#*=}"
-      ;;
-    --libstdcxx=*)
-      LIBSTDCXX="${arg#*=}"
       ;;
     --out=*)
       FOLDER="${arg#*=}"
@@ -53,13 +48,26 @@ echo "Removing ${SYSROOT_DIR} if exists..."
 echo "Creating sysroot folder ${SYSROOT_DIR}..."
 mkdir -p ${SYSROOT_DIR}
 
+COMPONENTS="main"
+
+if [ "$DISTRO" == "ubuntu" ]; then
+  COMPONENTS="main,restricted,universe,multiverse"
+fi
+
 echo "Downloading sysroot from ${MIRROR}..."
 debootstrap \
     --arch=${ARCH} \
     --variant=minbase \
     --components=${COMPONENTS} \
-    --include=build-essential,${LIBSTDCXX} \
+    --include=build-essential \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
+
+if [ "$DISTRO" == "ubuntu" ]; then
+  echo "deb ${MIRROR} ${VERSION}-updates main restricted universe multiverse" >> "${SYSROOT_DIR}/etc/apt/sources.list"
+  echo "deb ${MIRROR} ${VERSION}-security main restricted universe multiverse" >> "${SYSROOT_DIR}/etc/apt/sources.list"
+elif [ "$DISTRO" == "debian" ]; then
+  echo "deb ${MIRROR} ${VERSION}-updates main" >> "${SYSROOT_DIR}/etc/apt/sources.list"
+fi
 
 echo "Update and upgrade sysroot..."
 chroot "${SYSROOT_DIR}" /bin/bash -c "
