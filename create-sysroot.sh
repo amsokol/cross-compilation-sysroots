@@ -6,6 +6,7 @@ MIRROR="http://archive.ubuntu.com/ubuntu/"
 ARCH="x86_64"
 FOLDER="/opt"
 COMPONENTS="main,restricted,universe,multiverse"
+LIBSTDCXX="libstdc++-13-dev"
 
 # Parse args
 for arg in "$@"; do
@@ -21,6 +22,9 @@ for arg in "$@"; do
       ;;
     --arch=*)
       ARCH="${arg#*=}"
+      ;;
+    --libstdcxx=*)
+      LIBSTDCXX="${arg#*=}"
       ;;
     --out=*)
       FOLDER="${arg#*=}"
@@ -52,16 +56,13 @@ mkdir -p ${SYSROOT_DIR}
 echo "Downloading sysroot from ${MIRROR}..."
 debootstrap \
     --arch=${ARCH} \
-    --variant=buildd \
+    --variant=minbase \
     --components=${COMPONENTS} \
-    --include=build-essential \
+    --include=build-essential,${LIBSTDCXX} \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
 
-echo "Update and upgrade sysroot..."
+echo "Cleaning up apt cache..."
 chroot "${SYSROOT_DIR}" /bin/bash -c "
-  apt update -y &&
-  apt dist-upgrade -y &&
-  apt upgrade -y &&
   apt clean
 "
 
