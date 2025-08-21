@@ -29,6 +29,12 @@ sudo -i
 ./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=amd64 --out=/opt
 ```
 
+### Create the sysroots for Debian `trixie` (v13) `amd64`
+
+```bash
+./create-sysroot.sh --distro=debian --version=trixie --mirror=http://deb.debian.org/debian --arch=amd64 --out=/opt
+```
+
 ## Create the sysroots for `arm64` architecture
 
 ### Create the sysroots for Ubuntu `noble` (v24.04 LTS) `arm64`
@@ -41,4 +47,10 @@ sudo -i
 
 ```bash
 ./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=arm64 --out=/opt
+```
+
+### Create the sysroots for Debian `trixie` (v13) `arm64`
+
+```bash
+./create-sysroot.sh --distro=debian --version=trixie --mirror=http://deb.debian.org/debian --arch=arm64 --out=/opt
 ```
