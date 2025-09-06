@@ -26,7 +26,7 @@ sudo -i
 ### Create the sysroots for Debian `bookworm` (v12) `amd64`
 
 ```bash
-./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=amd64 --variant=buildd --variant=buildd --out=/opt
+./create-sysroot.sh --distro=debian --version=bookworm --mirror=http://deb.debian.org/debian --arch=amd64 --variant=buildd --out=/opt
 ```
 
 ### Create the sysroots for Debian `trixie` (v13) `amd64`

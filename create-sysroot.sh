@@ -73,28 +73,16 @@ if [ -n "${PACKAGES}" ]; then
 fi
 
 if [ "$DISTRO" == "ubuntu" ]; then
-  # echo "deb ${MIRROR} ${VERSION} main restricted universe multiverse" >> "${SYSROOT_DIR}/etc/apt/sources.list"
-  # echo "deb ${MIRROR} ${VERSION}-updates main restricted universe multiverse" >> "${SYSROOT_DIR}/etc/apt/sources.list"
-  # echo "deb ${MIRROR} ${VERSION}-security main restricted universe multiverse" >> "${SYSROOT_DIR}/etc/apt/sources.list"
-
   args+=" --extra-suites=${VERSION}-updates,${VERSION}-security"
 elif [ "$DISTRO" == "debian" ]; then
-  # echo "deb ${MIRROR} ${VERSION}-updates main" >> "${SYSROOT_DIR}/etc/apt/sources.list"
-  # echo "deb http://security.debian.org/debian-security ${VERSION}-security main" >> "${SYSROOT_DIR}/etc/apt/sources.list"
-  
   args+=" --extra-suites=${VERSION}-updates"
 fi
 
+echo "Running debootstrap..."
+echo "debootstrap ${args} ${VERSION} ${SYSROOT_DIR} ${MIRROR}"
 debootstrap \
     ${args} \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
-
-echo "Update and upgrade sysroot..."
-chroot "${SYSROOT_DIR}" /bin/bash -c "
-  apt update &&
-  apt upgrade -y &&
-  apt clean
-"
 
 echo "Stripping sysroot of unnecessary files..."
 rm -rf "${SYSROOT_DIR}"/usr/share/{doc,man,info,locale,lintian,bug,zoneinfo}
@@ -132,7 +120,7 @@ tar -C ${SYSROOT_DIR} --xz -cpf ${SYSROOT_ZIP} --numeric-owner --xattrs --acls \
 echo "Sysroot created successfully at ${SYSROOT_ZIP}."
 
 echo "Cleaning up..."
-# rm -rf ${SYSROOT_DIR}
+rm -rf ${SYSROOT_DIR}
 
 echo "Done."
 echo "You can now use the sysroot at ${SYSROOT_ZIP}."
