@@ -6,7 +6,7 @@
 
 ```bash
 sudo apt update
-sudo apt install debootstrap schroot
+sudo apt install debootstrap schroot debian-archive-keyring
 ```
 
 ## Login as root
