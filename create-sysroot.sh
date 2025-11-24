@@ -84,6 +84,39 @@ debootstrap \
     ${args} \
     ${VERSION} ${SYSROOT_DIR} ${MIRROR}
 
+echo "Configuring repositories and updating..."
+
+# Mount necessary filesystems
+mount -t proc /proc "${SYSROOT_DIR}/proc"
+mount -t sysfs /sys "${SYSROOT_DIR}/sys"
+mount -o bind /dev "${SYSROOT_DIR}/dev"
+mount -o bind /dev/pts "${SYSROOT_DIR}/dev/pts"
+
+# Setup sources.list
+if [ "$DISTRO" == "debian" ]; then
+  cat <<EOF > "${SYSROOT_DIR}/etc/apt/sources.list"
+deb ${MIRROR} ${VERSION} ${COMPONENTS//,/ }
+deb ${MIRROR} ${VERSION}-updates ${COMPONENTS//,/ }
+deb http://security.debian.org/debian-security ${VERSION}-security ${COMPONENTS//,/ }
+EOF
+elif [ "$DISTRO" == "ubuntu" ]; then
+  cat <<EOF > "${SYSROOT_DIR}/etc/apt/sources.list"
+deb ${MIRROR} ${VERSION} ${COMPONENTS//,/ }
+deb ${MIRROR} ${VERSION}-updates ${COMPONENTS//,/ }
+deb http://security.ubuntu.com/ubuntu ${VERSION}-security ${COMPONENTS//,/ }
+EOF
+fi
+
+# Upgrade
+chroot "${SYSROOT_DIR}" apt-get update
+chroot "${SYSROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y
+
+# Cleanup mounts
+umount "${SYSROOT_DIR}/dev/pts"
+umount "${SYSROOT_DIR}/dev"
+umount "${SYSROOT_DIR}/sys"
+umount "${SYSROOT_DIR}/proc"
+
 echo "Stripping sysroot of unnecessary files..."
 rm -rf "${SYSROOT_DIR}"/usr/share/{doc,man,info,locale,lintian,bug,zoneinfo}
 rm -rf "${SYSROOT_DIR}"/var/cache/apt/*
