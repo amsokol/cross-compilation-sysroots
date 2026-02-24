@@ -1,9 +1,10 @@
 #!/bin/bash
+set -e
 
 DISTRO="debian"
 VERSION="bookworm"
 MIRROR="http://deb.debian.org/debian/"
-ARCH="x86_64"
+ARCH="amd64"  # Debian/Ubuntu use amd64 (not x86_64), arm64 (not aarch64)
 FOLDER="/opt"
 VARIANT="buildd" # buildd, minbase, core, standard, etc.
 PACKAGES=""
@@ -42,19 +43,49 @@ done
 SYSROOT_DIR="${FOLDER}/${DISTRO}-${VERSION}-sysroot-${ARCH}"
 SYSROOT_ZIP="${FOLDER}/${DISTRO}-${VERSION}-sysroot-${ARCH}.tar.xz"
 
+# Pre-flight checks
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Error: Must run as root (mount, chroot require it)" >&2
+  exit 1
+fi
+if ! command -v debootstrap &>/dev/null; then
+  echo "Error: debootstrap not found. Install it (e.g. apt install debootstrap)" >&2
+  exit 1
+fi
+if ! command -v strip &>/dev/null; then
+  echo "Error: strip not found. Install it (e.g. apt install binutils)" >&2
+  exit 1
+fi
+if [ -d "${FOLDER}" ]; then
+  [ -w "${FOLDER}" ] || { echo "Error: Cannot write to ${FOLDER}" >&2; exit 1; }
+else
+  [ -w "$(dirname "${FOLDER}")" ] || { echo "Error: Cannot write to $(dirname "${FOLDER}")" >&2; exit 1; }
+fi
+
 echo "Creating sysroot for ${DISTRO} ${VERSION} (${ARCH})..."
 echo "Distro mirror: ${MIRROR}"
 echo "Sysroot folder: ${SYSROOT_DIR}"
 echo "Sysroot zip: ${SYSROOT_ZIP}"
 
 echo "Removing ${SYSROOT_ZIP} if exists..."
-[ -f ${SYSROOT_ZIP} ] && rm ${SYSROOT_ZIP}
+if [ -f "${SYSROOT_ZIP}" ]; then rm "${SYSROOT_ZIP}"; fi
 
 echo "Removing ${SYSROOT_DIR} if exists..."
-[ -d ${SYSROOT_DIR} ] && rm -rf ${SYSROOT_DIR}
+if [ -d "${SYSROOT_DIR}" ]; then rm -rf "${SYSROOT_DIR}"; fi
 
 echo "Creating sysroot folder ${SYSROOT_DIR}..."
-mkdir -p ${SYSROOT_DIR}
+mkdir -p "${SYSROOT_DIR}"
+
+# Ensure mounts are cleaned up on exit (success or failure)
+cleanup_mounts() {
+  if [ -d "${SYSROOT_DIR}" ]; then
+    umount "${SYSROOT_DIR}/dev/pts" 2>/dev/null || true
+    umount "${SYSROOT_DIR}/dev" 2>/dev/null || true
+    umount "${SYSROOT_DIR}/sys" 2>/dev/null || true
+    umount "${SYSROOT_DIR}/proc" 2>/dev/null || true
+  fi
+}
+trap cleanup_mounts EXIT
 
 COMPONENTS="main"
 
@@ -75,6 +106,7 @@ fi
 if [ "$DISTRO" == "ubuntu" ]; then
   args+=" --extra-suites=${VERSION}-updates,${VERSION}-security"
 elif [ "$DISTRO" == "debian" ]; then
+  # Security suite is on security.debian.org, not main mirror; apt upgrade will fetch it
   args+=" --extra-suites=${VERSION}-updates"
 fi
 
@@ -119,6 +151,12 @@ umount "${SYSROOT_DIR}/dev"
 umount "${SYSROOT_DIR}/sys"
 umount "${SYSROOT_DIR}/proc"
 
+# Remove symlinks that point to host paths (var/run -> /run, var/lock -> /run/lock).
+# They cause permission errors when the tarball is extracted elsewhere.
+for dir in var/run var/lock; do
+  if [ -L "${SYSROOT_DIR}/${dir}" ]; then rm "${SYSROOT_DIR}/${dir}"; fi
+done
+
 echo "Stripping sysroot of unnecessary files..."
 # Documentation and locales
 rm -rf "${SYSROOT_DIR}"/usr/share/{doc,man,info,locale,lintian,bug,zoneinfo}
@@ -131,31 +169,12 @@ rm -rf "${SYSROOT_DIR}"/usr/share/dict
 # Games
 rm -rf "${SYSROOT_DIR}"/usr/games
 
-# Apt caches and lists (keep sources.list)
-rm -rf "${SYSROOT_DIR}"/var/cache/apt/*
-rm -rf "${SYSROOT_DIR}"/var/lib/apt/lists/*
-
 # Logs and temp files
 rm -rf "${SYSROOT_DIR}"/var/log/*
 rm -rf "${SYSROOT_DIR}"/var/tmp/*
 rm -rf "${SYSROOT_DIR}"/tmp/*
 rm -rf "${SYSROOT_DIR}"/var/mail
 rm -rf "${SYSROOT_DIR}"/var/spool
-
-# Systemd units (not needed for sysroot)
-rm -rf "${SYSROOT_DIR}"/lib/systemd/system/multi-user.target.wants/*
-rm -rf "${SYSROOT_DIR}"/etc/systemd/system/*.wants/*
-rm -rf "${SYSROOT_DIR}"/lib/systemd/system/local-fs.target.wants/*
-rm -rf "${SYSROOT_DIR}"/lib/systemd/system/sockets.target.wants/*udev*
-rm -rf "${SYSROOT_DIR}"/lib/systemd/system/sockets.target.wants/*initctl*
-rm -rf "${SYSROOT_DIR}"/lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup*
-rm -rf "${SYSROOT_DIR}"/lib/systemd/system/systemd-update-utmp*
-
-# QEMU static binaries
-rm -rf "${SYSROOT_DIR}"/usr/bin/qemu-*-static
-
-# Apt archives
-rm -rf "${SYSROOT_DIR}"/var/cache/apt/archives/*.deb
 
 # Kernel modules and boot files (not needed for userspace dev)
 rm -rf "${SYSROOT_DIR}"/lib/modules
@@ -167,23 +186,55 @@ rm -rf "${SYSROOT_DIR}"/var/lib/apt
 
 # Backups and old configs
 rm -rf "${SYSROOT_DIR}"/var/backups
-rm -rf "${SYSROOT_DIR}"/etc/*.save
-rm -rf "${SYSROOT_DIR}"/etc/*.bak
+find "${SYSROOT_DIR}"/etc -maxdepth 1 \( -name '*.save' -o -name '*.bak' \) -exec rm -rf {} + 2>/dev/null || true
 
 # Udev and init scripts
 rm -rf "${SYSROOT_DIR}"/lib/udev
 rm -rf "${SYSROOT_DIR}"/etc/init.d
-rm -rf "${SYSROOT_DIR}"/etc/rc*.d
+for d in rc0.d rc1.d rc2.d rc3.d rc4.d rc5.d rc6.d rcS.d; do
+  rm -rf "${SYSROOT_DIR}/etc/${d}"
+done
 
 # Internationalization and additional docs
 rm -rf "${SYSROOT_DIR}"/usr/share/i18n
 rm -rf "${SYSROOT_DIR}"/usr/share/doc-base
 
-# Systemd state
-rm -rf "${SYSROOT_DIR}"/var/lib/systemd
-
 # Empty mount points and unused dirs
 rm -rf "${SYSROOT_DIR}"/media "${SYSROOT_DIR}"/mnt "${SYSROOT_DIR}"/srv
+
+# Dev (device nodes are host-specific, not needed for cross-compilation)
+rm -rf "${SYSROOT_DIR}"/dev
+
+# Proc/sys (empty after unmount, runtime mount points)
+rm -rf "${SYSROOT_DIR}"/proc "${SYSROOT_DIR}"/sys
+
+# Binaries (for running on target, not for linking; cross-compiler runs on host)
+rm -rf "${SYSROOT_DIR}"/bin "${SYSROOT_DIR}"/usr/bin "${SYSROOT_DIR}"/sbin "${SYSROOT_DIR}"/usr/sbin
+
+# User dirs
+rm -rf "${SYSROOT_DIR}"/root "${SYSROOT_DIR}"/home
+
+# Apt config (sources.list etc.; package mgmt not used in sysroot)
+rm -rf "${SYSROOT_DIR}"/etc/apt
+
+# Systemd (entire tree + state; init system not needed for build)
+rm -rf "${SYSROOT_DIR}"/lib/systemd "${SYSROOT_DIR}"/usr/lib/systemd "${SYSROOT_DIR}"/var/lib/systemd
+
+# Run (runtime state)
+rm -rf "${SYSROOT_DIR}"/run
+
+# Var cache (apt already cleared)
+rm -rf "${SYSROOT_DIR}"/var/cache
+
+# Etc cruft (alternatives, cron, default, skel, ssh, ssl)
+for d in cron.d cron.daily cron.hourly cron.monthly cron.weekly; do
+  rm -rf "${SYSROOT_DIR}/etc/${d}"
+done
+rm -rf "${SYSROOT_DIR}"/etc/alternatives "${SYSROOT_DIR}"/etc/default \
+       "${SYSROOT_DIR}"/etc/skel "${SYSROOT_DIR}"/etc/ssh "${SYSROOT_DIR}"/etc/ssl
+
+# Usr share cruft (perl, bash-completion, certs, apps, mime, terminfo)
+rm -rf "${SYSROOT_DIR}"/usr/share/{perl5,perl,bash-completion,ca-certificates,applications,mime,terminfo}
 
 # Python cache (if any)
 find "${SYSROOT_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -195,16 +246,16 @@ echo "Sysroot size:"
 du -sh "$SYSROOT_DIR"
 
 echo "Zipping sysroot to ${SYSROOT_ZIP}..."
-tar -C ${SYSROOT_DIR} --xz -cpf ${SYSROOT_ZIP} --numeric-owner --xattrs --acls \
+tar -C "${SYSROOT_DIR}" --xz -cpf "${SYSROOT_ZIP}" --numeric-owner \
     --exclude='*/*:*' \
     .
 
 echo "Sysroot created successfully at ${SYSROOT_ZIP}."
 
 echo "Cleaning up..."
-rm -rf ${SYSROOT_DIR}
+rm -rf "${SYSROOT_DIR}"
 
 echo "Done."
 echo "You can now use the sysroot at ${SYSROOT_ZIP}."
-hash=$(sha256sum ${SYSROOT_ZIP} | cut -d ' ' -f1)
+hash=$(sha256sum "${SYSROOT_ZIP}" | cut -d ' ' -f1)
 echo "sha256: $hash"
