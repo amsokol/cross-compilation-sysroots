@@ -248,6 +248,7 @@ du -sh "$SYSROOT_DIR"
 echo "Zipping sysroot to ${SYSROOT_ZIP}..."
 tar -C "${SYSROOT_DIR}" --xz -cpf "${SYSROOT_ZIP}" --numeric-owner \
     --exclude='*/*:*' \
+    --exclude='./dev' \
     .
 
 echo "Sysroot created successfully at ${SYSROOT_ZIP}."
