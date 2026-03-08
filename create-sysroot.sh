@@ -103,10 +103,7 @@ if [ -n "${PACKAGES}" ]; then
   args+=" --include=${PACKAGES}"
 fi
 
-if [ "$DISTRO" == "ubuntu" ]; then
-  args+=" --extra-suites=${VERSION}-updates,${VERSION}-security"
-elif [ "$DISTRO" == "debian" ]; then
-  # Security suite is on security.debian.org, not main mirror; apt upgrade will fetch it
+if [ "$DISTRO" == "debian" ]; then
   args+=" --extra-suites=${VERSION}-updates"
 fi
 
