@@ -1,0 +1,75 @@
+name: Build sysroots
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build sysroot (${{ matrix.distro }} ${{ matrix.version }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ matrix.image }}
+      options: --privileged
+
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [debian, ubuntu]
+        version: [bookworm, trixie, noble]
+        arch: [amd64, arm64]
+        exclude:
+          - distro: debian
+            version: noble
+          - distro: ubuntu
+            version: bookworm
+          - distro: ubuntu
+            version: trixie
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - version: bookworm
+            image: debian:12
+          - version: trixie
+            image: debian:13
+          - distro: ubuntu
+            image: ubuntu:24.04
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            debootstrap binutils xz-utils git ca-certificates
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build sysroot
+        run: |
+          MIRROR="http://deb.debian.org/debian/"
+          if [ "${{ matrix.distro }}" = "ubuntu" ]; then
+            if [ "${{ matrix.arch }}" = "arm64" ]; then
+              MIRROR="http://ports.ubuntu.com/ubuntu-ports/"
+            else
+              MIRROR="http://archive.ubuntu.com/ubuntu/"
+            fi
+          fi
+          ./create-sysroot.sh \
+            --distro=${{ matrix.distro }} \
+            --version=${{ matrix.version }} \
+            --arch=${{ matrix.arch }} \
+            --mirror="${MIRROR}" \
+            --out=$(pwd)/output
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: output/*.tar.xz

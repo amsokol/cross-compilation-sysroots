@@ -135,7 +135,7 @@ elif [ "$DISTRO" == "ubuntu" ]; then
   cat <<EOF > "${SYSROOT_DIR}/etc/apt/sources.list"
 deb ${MIRROR} ${VERSION} ${COMPONENTS//,/ }
 deb ${MIRROR} ${VERSION}-updates ${COMPONENTS//,/ }
-deb http://security.ubuntu.com/ubuntu ${VERSION}-security ${COMPONENTS//,/ }
+deb ${MIRROR} ${VERSION}-security ${COMPONENTS//,/ }
 EOF
 fi
 
